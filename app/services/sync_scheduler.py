@@ -24,7 +24,7 @@ def get_sync_status() -> dict:
     return {
         "sync_interval_minutes": settings.sync_interval_minutes,
         "briefing_hours": briefing_hours,
-        "imessage_recipient": settings.imessage_recipient[:3] + "****" if settings.imessage_recipient else None,
+        "telegram_configured": bool(settings.telegram_bot_token and settings.telegram_chat_id),
         "last_sync": _last_sync,
         "next_sync_at": next_at.isoformat() if next_at else None,
         "seconds_until_next": seconds_until,

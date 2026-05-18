@@ -4,6 +4,7 @@ from app.config import get_settings
 from app.services import hevy_service, hae_service, mfp_service, analysis_service, oura_service
 from app.services.sync_scheduler import run_scheduled_sync, get_sync_status
 from app.services.briefing import send_briefing, get_last_briefing
+from app.services import food_vision, barcode
 from app.database import workouts_col, nutrition_col, recovery_col, body_metrics_col
 
 router = APIRouter()
@@ -25,6 +26,29 @@ async def trigger_briefing(briefing_type: str = "check_in"):
 async def last_briefing():
     """Last briefing sent."""
     return get_last_briefing() or {"message": "No briefing sent yet"}
+
+
+@router.post("/food/photo")
+async def analyze_food_photo(file: UploadFile = File(...)):
+    """Upload a food photo, get macro breakdown via GPT-4o vision."""
+    image_data = await file.read()
+    mime = file.content_type or "image/jpeg"
+    result = await food_vision.analyze_food_photo(image_data, mime)
+    return result
+
+
+@router.get("/food/barcode/{upc}")
+async def lookup_barcode_endpoint(upc: str):
+    """Look up nutrition by barcode/UPC number."""
+    result = await barcode.lookup_barcode(upc)
+    return result
+
+
+@router.post("/food/search")
+async def search_food_endpoint(query: str = Query(..., description="e.g. '2 eggs and a banana'")):
+    """Natural language food search via Nutritionix."""
+    result = await barcode.search_food(query)
+    return result
 
 
 # ---- Health Auto Export Webhook ----

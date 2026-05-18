@@ -1,9 +1,9 @@
-"""Build and send daily briefing messages via iMessage."""
+"""Build and send daily briefing messages via Telegram."""
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from app.config import get_settings
-from app.services.imessage import send_imessage
+from app.services.telegram import send_message
 
 log = logging.getLogger("forge.briefing")
 
@@ -15,7 +15,6 @@ def get_last_briefing() -> dict | None:
 
 
 def _format_briefing(data: dict, briefing_type: str = "morning") -> str:
-    """Format analysis data into a concise iMessage."""
     lines = []
 
     if briefing_type == "morning":
@@ -32,7 +31,6 @@ def _format_briefing(data: dict, briefing_type: str = "morning") -> str:
     else:
         lines.append("Today: Rest day")
 
-    # Yesterday's score
     score = data.get("score")
     if score is not None:
         if score >= 80:
@@ -42,7 +40,6 @@ def _format_briefing(data: dict, briefing_type: str = "morning") -> str:
         else:
             lines.append(f"Score: {score}/100 — needs attention")
 
-    # Nutrition snapshot
     nutrition = data.get("nutrition")
     if nutrition:
         cal = nutrition.get("calories", 0)
@@ -54,7 +51,6 @@ def _format_briefing(data: dict, briefing_type: str = "morning") -> str:
         lines.append(f"Cal: {cal}/{cal_target} ({sign}{cal_delta})")
         lines.append(f"Protein: {pro}g/{pro_target}g")
 
-    # Recovery
     recovery = data.get("recovery")
     if recovery:
         parts = []
@@ -67,7 +63,6 @@ def _format_briefing(data: dict, briefing_type: str = "morning") -> str:
         if parts:
             lines.append(" · ".join(parts))
 
-    # Workout results
     workout_data = data.get("workout")
     if workout_data:
         hit_rate = workout_data.get("hit_rate", 0)
@@ -79,7 +74,6 @@ def _format_briefing(data: dict, briefing_type: str = "morning") -> str:
         if missed:
             lines.append(f"Missed: {', '.join(missed)}")
 
-    # Top recommendation
     recs = data.get("recommendations", [])
     if recs:
         lines.append("")
@@ -89,17 +83,15 @@ def _format_briefing(data: dict, briefing_type: str = "morning") -> str:
 
 
 async def send_briefing(briefing_type: str = "morning") -> dict:
-    """Generate analysis and send it as an iMessage."""
     global _last_briefing
     settings = get_settings()
 
-    if not settings.imessage_recipient:
-        log.warning("No iMessage recipient configured (IMESSAGE_RECIPIENT)")
-        return {"sent": False, "error": "no_recipient_configured"}
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        log.warning("Telegram not configured (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID)")
+        return {"sent": False, "error": "telegram_not_configured"}
 
     now = datetime.now(timezone.utc)
 
-    # Get today's analysis
     if settings.preview_mode:
         from app.services.preview_data import DASHBOARD
         analysis = DASHBOARD
@@ -110,7 +102,7 @@ async def send_briefing(briefing_type: str = "morning") -> dict:
         analysis = await analyze_day(d.today(), program_start)
 
     message = _format_briefing(analysis, briefing_type)
-    result = send_imessage(settings.imessage_recipient, message)
+    result = await send_message(message, parse_mode=None)
 
     _last_briefing = {
         "at": now.isoformat(),

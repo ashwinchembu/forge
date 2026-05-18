@@ -6,6 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.routes.api import router
 from app.routes.preview import router as preview_router
 from app.routes.mobile import router as mobile_router
+from app.routes.telegram import router as telegram_router
 from app.database import setup_indexes
 from app.services.sync_scheduler import run_scheduled_sync
 from app.services.briefing import send_briefing
@@ -37,9 +38,9 @@ async def lifespan(app: FastAPI):
     )
     print(f"Data sync: every {interval_min} minutes (Hevy + Oura)")
 
-    # 2) iMessage briefings: at configured hours (default 7am, 1pm, 7pm)
+    # 2) Telegram briefings: at configured hours (default 7am, 1pm, 7pm)
     briefing_hours = [int(h.strip()) for h in settings.briefing_hours.split(",") if h.strip()]
-    if settings.imessage_recipient and briefing_hours:
+    if settings.telegram_bot_token and settings.telegram_chat_id and briefing_hours:
         for hour in briefing_hours:
             briefing_type = "morning" if hour == briefing_hours[0] else "check_in"
             scheduler.add_job(
@@ -51,9 +52,9 @@ async def lifespan(app: FastAPI):
                 id=f"briefing_{hour}",
             )
         hours_str = ", ".join(f"{h}:00" for h in briefing_hours)
-        print(f"iMessage briefings: {hours_str} -> {settings.imessage_recipient}")
-    elif not settings.imessage_recipient:
-        print("iMessage: no recipient set (add IMESSAGE_RECIPIENT to .env)")
+        print(f"Telegram briefings: {hours_str}")
+    elif not settings.telegram_bot_token:
+        print("Telegram: no bot token set (add TELEGRAM_BOT_TOKEN to .env)")
 
     scheduler.start()
     yield
@@ -80,6 +81,7 @@ app.add_middleware(
 app.include_router(router, prefix="/api")
 app.include_router(preview_router, prefix="/api")
 app.include_router(mobile_router, prefix="/api")
+app.include_router(telegram_router, prefix="/api")
 
 
 @app.get("/app", response_class=RedirectResponse, include_in_schema=False)

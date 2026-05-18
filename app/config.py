@@ -13,9 +13,19 @@ class Settings(BaseSettings):
     preview_mode: bool = False
     cors_origins: str = "*"
     program_start: str = "2026-05-19"
-    sync_interval_minutes: int = 15  # data pulls: as fast as sources allow
-    briefing_hours: str = "7,13,19"  # morning + every 6h: 7am, 1pm, 7pm
-    imessage_recipient: str = ""  # phone number (+1XXXXXXXXXX) or Apple ID email
+    sync_interval_minutes: int = 15
+    briefing_hours: str = "7,13,19"  # 7am, 1pm, 7pm local time
+
+    # Telegram
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+
+    # OpenAI (GPT-4o vision for food photos)
+    openai_api_key: str = ""
+
+    # Nutritionix (barcode + natural language food lookup)
+    nutritionix_app_id: str = ""
+    nutritionix_api_key: str = ""
 
     class Config:
         env_file = ".env"
