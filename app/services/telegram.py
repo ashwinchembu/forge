@@ -13,18 +13,18 @@ def _url(method: str) -> str:
     return f"{_BASE}{get_settings().telegram_bot_token}/{method}"
 
 
-async def send_message(text: str, chat_id: str | None = None, parse_mode: str = "Markdown") -> dict:
+async def send_message(text: str, chat_id: str | None = None, parse_mode: str | None = "Markdown") -> dict:
     settings = get_settings()
     cid = chat_id or settings.telegram_chat_id
     if not cid or not settings.telegram_bot_token:
         return {"sent": False, "error": "telegram not configured"}
 
+    payload: dict = {"chat_id": cid, "text": text}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+
     async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.post(_url("sendMessage"), json={
-            "chat_id": cid,
-            "text": text,
-            "parse_mode": parse_mode,
-        })
+        r = await client.post(_url("sendMessage"), json=payload)
     data = r.json()
     if data.get("ok"):
         log.info(f"Telegram message sent to {cid}")

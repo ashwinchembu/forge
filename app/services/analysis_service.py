@@ -73,7 +73,7 @@ PROGRAM = {
     },
 }
 
-SCHEDULE = {0: "Upper A", 1: "Lower A", 3: "Upper B", 4: "Lower B"}  # Mon=0, Tue=1, Thu=3, Fri=4
+SCHEDULE = {3: "Upper A", 4: "Lower A", 0: "Upper B", 1: "Lower B"}  # Thu=3, Fri=4, Mon=0, Tue=1
 
 
 def get_program_week(start_date: date, current_date: date) -> int:
@@ -234,7 +234,20 @@ async def analyze_day(target_date: date, program_start: date) -> dict:
     result["score"] = round(sum(score_components) / max(len(score_components), 1) * (100 / 30), 0)
     result["score"] = min(100, max(0, result["score"]))
 
+    # Next workout info
+    next_day = _next_training_day(target_date)
+    result["next_workout"] = next_day
+
     return result
+
+
+def _next_training_day(current: date) -> dict | None:
+    """Find the next scheduled training day after current."""
+    for i in range(1, 8):
+        d = current + timedelta(days=i)
+        name = SCHEDULE.get(d.weekday())
+        if name:
+            return {"date": str(d), "name": name, "weekday": d.strftime("%A")}
 
 
 async def weekly_summary(program_start: date, week_num: int) -> dict:

@@ -1,105 +1,57 @@
-"""Sample payloads for preview/demo mode — mirrors production API shapes."""
+"""
+Preview/demo data — used when PREVIEW_MODE=true.
+Mirrors production API shapes but uses realistic placeholder data.
+Body metrics are empty until real data comes in from Apple Health.
+"""
 
-PROGRAM_START = "2026-05-19"
+from datetime import date
 
-DASHBOARD = {
-    "date": "2026-05-18",
-    "week": 1,
-    "phase": "cut",
-    "expected_workout": "Upper A",
-    "score": 78,
-    "workout": {
-        "exercises": [
-            {
-                "exercise": "Bench Press (Barbell)",
-                "target_weight": 215,
-                "actual_weight": 215,
-                "target_reps": "6-8",
-                "actual_reps": [8, 7, 6, 6],
-                "status": "hit",
-                "volume_delta_pct": 2.1,
-            },
-            {
-                "exercise": "Bent Over Row (Barbell)",
-                "target_weight": 205,
-                "actual_weight": 205,
-                "target_reps": "6-8",
-                "actual_reps": [8, 8, 7],
-                "status": "hit",
-                "volume_delta_pct": 4.0,
-            },
-            {
-                "exercise": "Incline DB Press",
-                "target_weight": 90,
-                "actual_weight": 85,
-                "target_reps": "8-12",
-                "actual_reps": [10, 10, 9],
-                "status": "close",
-                "volume_delta_pct": -5.2,
-            },
-        ],
-        "hit_rate": 0.67,
-    },
-    "nutrition": {
-        "calories": 2085,
-        "target_calories": 2200,
-        "protein_g": 172,
-        "target_protein_g": 180,
-        "carbs_g": 148,
-        "fat_g": 58,
-        "calorie_delta": -115,
-        "protein_delta": -8,
-    },
-    "recovery": {
-        "sleep_hours": 7.4,
-        "hrv_ms": 42.5,
-        "resting_heart_rate": 54,
-        "steps": 8420,
-    },
-    "recommendations": [
-        "Protein 172g is 8g below target. Prioritize protein in remaining meals.",
-        "Incline DB Press was close — consider staying at 85 lbs next session if form breaks down.",
-    ],
-}
+PROGRAM_START = "2026-05-22"
 
-WORKOUTS = [
-    {
-        "_id": "preview-w1",
-        "date": "2026-05-18T17:30:00",
-        "name": "Upper A",
-        "duration_minutes": 62,
-        "source": "hevy",
-        "exercises": [
-            {"name": "Bench Press (Barbell)", "sets": [{"set_number": 1, "weight_lbs": 215, "reps": 8}]},
-        ],
-        "total_volume_lbs": 12450,
+
+def _get_today_schedule():
+    weekday = date.today().weekday()
+    schedule = {3: "Upper A", 4: "Lower A", 0: "Upper B", 1: "Lower B"}
+    return schedule.get(weekday)
+
+
+def get_dashboard():
+    today = date.today()
+    expected = _get_today_schedule()
+    is_rest_day = expected is None
+
+    dashboard = {
+        "date": str(today),
+        "week": 1,
+        "phase": "cut",
+        "expected_workout": expected,
+        "score": None,
+        "workout": None,
+        "nutrition": None,
+        "recovery": None,
+        "recommendations": [],
     }
-]
 
-NUTRITION = [
-    {
-        "_id": "preview-n1",
-        "date": "2026-05-18T00:00:00",
-        "calories": 2085,
-        "protein_g": 172,
-        "carbs_g": 148,
-        "fat_g": 58,
-        "fiber_g": 28,
-    }
-]
+    if is_rest_day:
+        dashboard["recommendations"] = [
+            "Rest day. Light cardio (30 min incline walk) for recovery.",
+        ]
+        dashboard["score"] = 0
+    else:
+        dashboard["recommendations"] = [
+            f"Today is {expected}. Log your workout in Hevy and it will sync automatically.",
+            "Program starts Thursday May 22. Weights and targets are set for week 1.",
+        ]
 
-RECOVERY = [
-    {
-        "_id": "preview-r1",
-        "date": "2026-05-18T00:00:00",
-        "sleep": {"total_hours": 7.4, "deep_hours": 1.8, "rem_hours": 1.6},
-        "hrv_ms": 42.5,
-        "resting_heart_rate": 54,
-        "steps": 8420,
-    }
-]
+    return dashboard
 
-BODY_METRICS = [
-    {"_id": "preview-b1", "date": "2026-05-18T00:00:00", "weight_lbs": 198.2, "body_fat_pct": 14.1},
-    {"_id": "preview-b2", "date": "2026-05-11T00:00:00", "weight_lbs": 199.0, "body_fat_pct": 14.3},
-]
+
+DASHBOARD = get_dashboard()
+
+WORKOUTS = []
+
+NUTRITION = []
+
+RECOVERY = []
+
+BODY_METRICS = []

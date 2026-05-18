@@ -29,7 +29,7 @@ async def preview_manifest():
 
 @router.get("/preview/dashboard")
 async def preview_dashboard():
-    return preview_data.DASHBOARD
+    return preview_data.get_dashboard()
 
 
 @router.get("/preview/workouts")

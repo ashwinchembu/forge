@@ -4,7 +4,7 @@ from app.config import get_settings
 from app.services import hevy_service, hae_service, mfp_service, analysis_service, oura_service
 from app.services.sync_scheduler import run_scheduled_sync, get_sync_status
 from app.services.briefing import send_briefing, get_last_briefing
-from app.services import food_vision, barcode
+from app.services import food_vision, barcode, ai_coach
 from app.database import workouts_col, nutrition_col, recovery_col, body_metrics_col
 
 router = APIRouter()
@@ -42,6 +42,16 @@ async def lookup_barcode_endpoint(upc: str):
     """Look up nutrition by barcode/UPC number."""
     result = await barcode.lookup_barcode(upc)
     return result
+
+
+@router.get("/analysis/suggestions")
+async def get_suggestions(program_start: str = Query(..., description="YYYY-MM-DD")):
+    """AI-powered suggestions for the next workout based on today's data."""
+    start = date.fromisoformat(program_start)
+    analysis = await analysis_service.analyze_day(date.today(), start)
+    next_name = analysis.get("next_workout", {}).get("name") if analysis.get("next_workout") else None
+    suggestions = await ai_coach.get_ai_suggestions(analysis, next_name)
+    return {"analysis_date": str(date.today()), "suggestions": suggestions}
 
 
 @router.post("/food/search")

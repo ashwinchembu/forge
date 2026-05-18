@@ -3,7 +3,7 @@
 import logging
 import re
 from fastapi import APIRouter, Request
-from app.services import telegram, food_vision, barcode
+from app.services import telegram, food_vision, barcode, ai_coach
 from app.config import get_settings
 
 log = logging.getLogger("forge.telegram_webhook")
@@ -74,6 +74,24 @@ async def telegram_webhook(request: Request):
         from app.services.briefing import _format_briefing
         msg = _format_briefing(analysis, "check_in")
         await telegram.send_message(msg, chat_id=chat_id, parse_mode=None)
+        return {"ok": True}
+
+    # /next command — AI suggestions for next workout
+    if text.startswith("/next"):
+        settings = get_settings()
+        if settings.preview_mode:
+            from app.services.preview_data import get_dashboard
+            analysis = get_dashboard()
+        else:
+            from app.services.analysis_service import analyze_day
+            from datetime import date
+            program_start = date.fromisoformat(settings.program_start)
+            analysis = await analyze_day(date.today(), program_start)
+
+        next_name = analysis.get("next_workout", {}).get("name") if analysis.get("next_workout") else None
+        suggestions = await ai_coach.get_ai_suggestions(analysis, next_name)
+        reply = ai_coach.format_suggestions_message(suggestions)
+        await telegram.send_message(reply, chat_id=chat_id)
         return {"ok": True}
 
     # Barcode (8-14 digits)
