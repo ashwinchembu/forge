@@ -2,9 +2,15 @@ from fastapi import APIRouter, UploadFile, File, Header, HTTPException, Query
 from datetime import date, datetime
 from app.config import get_settings
 from app.services import hevy_service, hae_service, mfp_service, analysis_service, oura_service
+from app.services.sync_scheduler import run_scheduled_sync, get_sync_status
 from app.database import workouts_col, nutrition_col, recovery_col, body_metrics_col
 
 router = APIRouter()
+
+
+@router.get("/sync/status")
+async def sync_status():
+    return get_sync_status()
 
 
 # ---- Health Auto Export Webhook ----
@@ -40,15 +46,7 @@ async def sync_oura(days: int = 7):
 
 @router.post("/sync/all")
 async def sync_all():
-    results = {}
-    try:
-        results["hevy"] = await hevy_service.sync_hevy_workouts()
-    except Exception as e:
-        results["hevy"] = {"error": str(e)}
-    try:
-        results["oura"] = await oura_service.sync_oura()
-    except Exception as e:
-        results["oura"] = {"error": str(e)}
+    results = await run_scheduled_sync()
     return {"status": "ok", "results": results}
 
 

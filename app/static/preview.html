@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>Forge — Mobile Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Forge</title>
+  <link rel="manifest" href="/api/preview/manifest.json" />
   <style>
     :root {
       --bg: #0a0a0f;
@@ -15,156 +20,346 @@
       --green: #00d68f;
       --yellow: #ffaa00;
       --red: #ff6b6b;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --tab-h: 64px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #1a1a24;
+      background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+    }
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: 100dvh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .header {
+      flex-shrink: 0;
+      padding: calc(12px + var(--safe-top)) 16px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .header h1 { font-size: 1.25rem; font-weight: 700; }
+    .sync-pill {
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 10px;
+      white-space: nowrap;
+    }
+    .sync-pill.syncing { color: var(--accent); border-color: var(--accent); }
+    .phase-line {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 16px calc(var(--tab-h) + var(--safe-bottom) + 16px);
+      overscroll-behavior-y: contain;
+    }
+    .pull-hint {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 8px 0 4px;
+      touch-action: none;
+    }
+    .score-ring {
+      width: min(140px, 38vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 6px solid var(--accent);
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 24px 16px 40px;
-    }
-    h1 { font-size: 1.1rem; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
-    .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; text-align: center; }
-    .phone {
-      width: 100%;
-      max-width: 390px;
-      background: var(--bg);
-      border-radius: 36px;
-      border: 3px solid #333;
-      overflow: hidden;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
-    }
-    .status-bar {
-      height: 44px;
-      display: flex;
-      align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
+      margin: 8px auto 16px;
     }
-    .screen { padding: 16px; min-height: 520px; }
-    .score-ring {
-      width: 120px; height: 120px;
-      border-radius: 50%;
-      border: 6px solid var(--accent);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      margin: 0 auto 16px;
-    }
-    .score-ring .num { font-size: 2.2rem; font-weight: 700; }
-    .score-ring .lbl { font-size: 0.7rem; color: var(--muted); }
+    .score-ring .num { font-size: clamp(2rem, 8vw, 2.5rem); font-weight: 700; line-height: 1; }
+    .score-ring .lbl { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
     .phase-badge {
       display: inline-block;
       background: var(--accent);
       color: white;
-      padding: 4px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 500;
       margin-bottom: 12px;
     }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      margin-bottom: 10px;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
     }
-    .card h3 { font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 4px 0; }
+    .card h3 {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.95rem;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      min-height: 44px;
+    }
+    .row:last-child { border-bottom: none; padding-bottom: 0; }
+    .row span:first-child { flex: 1; line-height: 1.3; }
+    .row span:last-child { flex-shrink: 0; text-align: right; }
     .status-hit { color: var(--green); }
     .status-close { color: var(--yellow); }
     .status-missed { color: var(--red); }
-    .rec { font-size: 0.85rem; color: var(--muted); line-height: 1.4; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .rec {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.45;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
     .rec:last-child { border: none; }
     .tabs {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
       display: flex;
       border-top: 1px solid var(--border);
-      background: var(--card);
+      background: rgba(10, 10, 15, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding-bottom: var(--safe-bottom);
+      z-index: 100;
     }
     .tab {
       flex: 1;
-      padding: 12px 4px;
-      text-align: center;
+      min-height: var(--tab-h);
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
       font-size: 0.65rem;
       color: var(--muted);
       cursor: pointer;
       border: none;
       background: none;
-      color: var(--muted);
+      touch-action: manipulation;
     }
     .tab.active { color: var(--accent); }
-    .tab span { display: block; font-size: 1.2rem; margin-bottom: 2px; }
-    .hidden { display: none; }
-    .macro-bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: 6px; overflow: hidden; }
-    .macro-fill { height: 100%; background: var(--accent); border-radius: 3px; }
-    .links { margin-top: 20px; text-align: center; font-size: 0.85rem; }
-    .links a { color: var(--accent); margin: 0 8px; }
+    .tab .icon { font-size: 1.35rem; line-height: 1; }
+    .macro-bar {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .macro-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.4s ease; }
+    .loading, .error-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+    .error-state button {
+      margin-top: 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 1rem;
+      min-height: 48px;
+      cursor: pointer;
+    }
+    .refresh-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--accent);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      min-height: 36px;
+      cursor: pointer;
+    }
+    @media (min-width: 481px) {
+      body { background: #12121a; }
+      .app { box-shadow: 0 0 0 1px var(--border); }
+    }
   </style>
 </head>
 <body>
-  <h1>Forge</h1>
-  <p class="subtitle">Mobile app preview — same API your React Native / Expo app will use</p>
+  <div class="app">
+    <header class="header">
+      <div class="header-top">
+        <h1>Forge</h1>
+        <button type="button" class="refresh-btn" id="refreshBtn" aria-label="Refresh now">↻</button>
+      </div>
+      <div class="phase-line" id="phaseLine">Loading…</div>
+      <div id="syncPill" class="sync-pill">Syncs every 6 hours</div>
+    </header>
 
-  <div class="phone">
-    <div class="status-bar">Forge · Week 1 · Cut Phase</div>
-    <div id="screen" class="screen"></div>
-    <nav class="tabs" id="tabs"></nav>
-  </div>
+    <main class="content" id="content">
+      <div class="loading">Loading your data…</div>
+    </main>
 
-  <div class="links">
-    <a href="/docs" target="_blank">API Docs</a>
-    <a href="/api/mobile/config" target="_blank">Mobile Config</a>
-    <a href="/api/mobile/health" target="_blank">Health</a>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
   </div>
 
   <script>
     const TABS = [
-      { id: "dashboard", icon: "📊", label: "Dashboard" },
+      { id: "dashboard", icon: "📊", label: "Home" },
       { id: "workout", icon: "🏋️", label: "Workout" },
-      { id: "nutrition", icon: "🍽", label: "Nutrition" },
+      { id: "nutrition", icon: "🍽", label: "Food" },
       { id: "recovery", icon: "😴", label: "Recovery" },
       { id: "progress", icon: "📈", label: "Progress" },
     ];
+    const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
     let active = "dashboard";
     let data = {};
+    let syncTimer = null;
+    let countdownTimer = null;
 
-    async function load() {
-      const [dash, workouts, nutrition, recovery, body, program] = await Promise.all([
-        fetch("/api/preview/dashboard").then(r => r.json()),
-        fetch("/api/preview/workouts").then(r => r.json()),
-        fetch("/api/preview/nutrition").then(r => r.json()),
-        fetch("/api/preview/recovery").then(r => r.json()),
-        fetch("/api/preview/body-metrics").then(r => r.json()),
-        fetch("/api/preview/program/week/1").then(r => r.json()),
-      ]);
-      data = { dash, workouts, nutrition, recovery, body, program };
-      render();
+    function formatCountdown(seconds) {
+      if (seconds == null) return "—";
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    }
+
+    async function fetchSyncStatus() {
+      try {
+        const r = await fetch("/api/sync/status");
+        return r.json();
+      } catch {
+        return null;
+      }
+    }
+
+    function updateSyncPill(status, syncing = false) {
+      const pill = document.getElementById("syncPill");
+      if (syncing) {
+        pill.textContent = "Syncing…";
+        pill.classList.add("syncing");
+        return;
+      }
+      pill.classList.remove("syncing");
+      if (!status) {
+        pill.textContent = "Updates every 6 hours";
+        return;
+      }
+      const last = status.last_sync?.at;
+      const next = status.seconds_until_next;
+      if (last) {
+        const d = new Date(last);
+        const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        pill.textContent = `Updated ${time} · next in ${formatCountdown(next)}`;
+      } else {
+        pill.textContent = `Next update in ${formatCountdown(next)}`;
+      }
+    }
+
+    async function load(showSpinner = true) {
+      const content = document.getElementById("content");
+      if (showSpinner) content.innerHTML = '<div class="loading">Loading…</div>';
+
+      try {
+        const [dash, workouts, nutrition, recovery, body, program, syncStatus] = await Promise.all([
+          fetch("/api/preview/dashboard").then(r => r.json()),
+          fetch("/api/preview/workouts").then(r => r.json()),
+          fetch("/api/preview/nutrition").then(r => r.json()),
+          fetch("/api/preview/recovery").then(r => r.json()),
+          fetch("/api/preview/body-metrics").then(r => r.json()),
+          fetch("/api/preview/program/week/1").then(r => r.json()),
+          fetchSyncStatus(),
+        ]);
+        data = { dash, workouts, nutrition, recovery, body, program };
+        document.getElementById("phaseLine").textContent =
+          `Week ${dash.week} · ${dash.phase} phase · ${dash.expected_workout || "Rest day"}`;
+        updateSyncPill(syncStatus);
+        scheduleCountdown(syncStatus);
+        render();
+      } catch (e) {
+        content.innerHTML = `<div class="error-state"><p>Couldn't load data</p><button type="button" onclick="load()">Try again</button></div>`;
+      }
+    }
+
+    function scheduleCountdown(status) {
+      if (countdownTimer) clearInterval(countdownTimer);
+      if (!status?.seconds_until_next) return;
+      let remaining = status.seconds_until_next;
+      countdownTimer = setInterval(() => {
+        remaining = Math.max(0, remaining - 1);
+        updateSyncPill({ ...status, seconds_until_next: remaining });
+        if (remaining <= 0) {
+          clearInterval(countdownTimer);
+          triggerSync();
+        }
+      }, 1000);
+    }
+
+    async function triggerSync() {
+      updateSyncPill(null, true);
+      try {
+        await fetch("/api/sync/all", { method: "POST" });
+      } catch { /* preview may skip */ }
+      await load(false);
+    }
+
+    function setupAutoRefresh() {
+      if (syncTimer) clearInterval(syncTimer);
+      syncTimer = setInterval(() => triggerSync(), SYNC_INTERVAL_MS);
     }
 
     function renderDashboard() {
       const d = data.dash;
       const ex = d.workout?.exercises || [];
       return `
-        <div class="phase-badge">${d.phase.toUpperCase()} · Week ${d.week} · ${d.expected_workout || "Rest"}</div>
+        <div class="phase-badge">${d.phase.toUpperCase()} · Score ${d.score}</div>
         <div class="score-ring"><div class="num">${d.score}</div><div class="lbl">Daily Score</div></div>
         <div class="card">
           <h3>Today's Lifts</h3>
-          ${ex.map(e => `
+          ${ex.length ? ex.map(e => `
             <div class="row">
               <span>${e.exercise.split("(")[0].trim()}</span>
-              <span class="status-${e.status}">${e.actual_weight || "—"} lbs · ${e.status}</span>
+              <span class="status-${e.status}">${e.actual_weight ?? "—"} lbs</span>
             </div>
-          `).join("")}
+          `).join("") : '<div class="rec">No lifts logged yet</div>'}
         </div>
         <div class="card">
           <h3>Recommendations</h3>
-          ${(d.recommendations || []).map(r => `<div class="rec">${r}</div>`).join("")}
+          ${(d.recommendations || []).map(r => `<div class="rec">${r}</div>`).join("") || "<div class=\"rec\">You are on track.</div>"}
         </div>
       `;
     }
@@ -173,10 +368,10 @@
       const p = data.program.program?.["Upper A"] || {};
       return `
         <div class="card"><h3>Upper A — Bench Priority</h3></div>
-        ${Object.entries(p).slice(0, 6).map(([name, t]) => `
+        ${Object.entries(p).map(([name, t]) => `
           <div class="card">
-            <div class="row"><strong>${name.split("(")[0].trim()}</strong><span>${t.weight} lbs</span></div>
-            <div class="row"><span style="color:var(--muted)">${t.sets} × ${t.reps}</span><span style="color:var(--muted)">${t.rest_seconds}s rest</span></div>
+            <div class="row"><span><strong>${name.split("(")[0].trim()}</strong></span><span>${t.weight} lbs</span></div>
+            <div class="row"><span>${t.sets} × ${t.reps}</span><span>${t.rest_seconds}s rest</span></div>
           </div>
         `).join("")}
       `;
@@ -184,18 +379,18 @@
 
     function renderNutrition() {
       const n = data.dash.nutrition;
-      if (!n) return "<p>No data</p>";
+      if (!n) return '<div class="card"><div class="rec">No nutrition data yet</div></div>';
       const pct = Math.min(100, (n.calories / n.target_calories) * 100);
       const proPct = Math.min(100, (n.protein_g / n.target_protein_g) * 100);
       return `
         <div class="card">
           <h3>Calories</h3>
-          <div class="row"><span>${n.calories}</span><span>${n.target_calories} target</span></div>
+          <div class="row"><span>${n.calories.toLocaleString()}</span><span>${n.target_calories.toLocaleString()} goal</span></div>
           <div class="macro-bar"><div class="macro-fill" style="width:${pct}%"></div></div>
         </div>
         <div class="card">
           <h3>Protein</h3>
-          <div class="row"><span>${n.protein_g}g</span><span>${n.target_protein_g}g target</span></div>
+          <div class="row"><span>${n.protein_g}g</span><span>${n.target_protein_g}g goal</span></div>
           <div class="macro-bar"><div class="macro-fill" style="width:${proPct}%"></div></div>
         </div>
         <div class="card">
@@ -207,7 +402,7 @@
 
     function renderRecovery() {
       const r = data.dash.recovery;
-      if (!r) return "<p>No data</p>";
+      if (!r) return '<div class="card"><div class="rec">No recovery data yet</div></div>';
       return `
         <div class="card"><div class="row"><span>Sleep</span><span>${r.sleep_hours}h</span></div></div>
         <div class="card"><div class="row"><span>HRV</span><span>${r.hrv_ms} ms</span></div></div>
@@ -217,10 +412,11 @@
     }
 
     function renderProgress() {
+      if (!data.body?.length) return '<div class="card"><div class="rec">No body metrics yet</div></div>';
       return data.body.map(b => `
         <div class="card">
           <div class="row"><span>${b.date.slice(0, 10)}</span><span>${b.weight_lbs} lbs</span></div>
-          <div class="row"><span style="color:var(--muted)">Body fat</span><span>${b.body_fat_pct}%</span></div>
+          <div class="row"><span>Body fat</span><span>${b.body_fat_pct}%</span></div>
         </div>
       `).join("");
     }
@@ -233,23 +429,44 @@
         recovery: renderRecovery,
         progress: renderProgress,
       };
-      document.getElementById("screen").innerHTML = screens[active]();
+      document.getElementById("content").innerHTML = screens[active]();
       document.querySelectorAll(".tab").forEach(t => {
-        t.classList.toggle("active", t.dataset.id === active);
+        const on = t.dataset.id === active;
+        t.classList.toggle("active", on);
+        t.setAttribute("aria-selected", on);
       });
     }
+
+    // Pull to refresh
+    let touchStartY = 0;
+    const contentEl = document.getElementById("content");
+    contentEl.addEventListener("touchstart", e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+    contentEl.addEventListener("touchend", e => {
+      if (contentEl.scrollTop > 0) return;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (dy > 80) triggerSync();
+    }, { passive: true });
+
+    document.getElementById("refreshBtn").onclick = () => triggerSync();
 
     const tabsEl = document.getElementById("tabs");
     TABS.forEach(t => {
       const btn = document.createElement("button");
+      btn.type = "button";
       btn.className = "tab";
       btn.dataset.id = t.id;
-      btn.innerHTML = `<span>${t.icon}</span>${t.label}`;
+      btn.setAttribute("role", "tab");
+      btn.innerHTML = `<span class="icon">${t.icon}</span>${t.label}`;
       btn.onclick = () => { active = t.id; render(); };
       tabsEl.appendChild(btn);
     });
 
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") load(false);
+    });
+
     load();
+    setupAutoRefresh();
   </script>
 </body>
 </html>

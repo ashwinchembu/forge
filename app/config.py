@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     preview_mode: bool = False
     cors_origins: str = "*"  # comma-separated for production, e.g. http://localhost:8081
     program_start: str = "2026-05-19"  # default for mobile clients
+    sync_interval_hours: int = 6
 
     class Config:
         env_file = ".env"

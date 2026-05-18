@@ -1,0 +1,10 @@
+{
+  "name": "Forge",
+  "short_name": "Forge",
+  "description": "Personal fitness intelligence",
+  "start_url": "/api/app",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "orientation": "portrait"
+}

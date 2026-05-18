@@ -4,9 +4,9 @@ Your personal fitness intelligence backend. Forge pulls data from three sources 
 
 ## What It Does
 
-**Every hour**, Health Auto Export pushes your Apple Health data (calories, macros, sleep, HRV, heart rate, steps, weight) to Forge's webhook endpoint. This captures everything MFP and Oura write to Apple Health automatically.
+**Every 6 hours**, Forge syncs all data sources: Hevy workouts, Oura recovery, and any Apple Health data received via webhook. The mobile web app also refreshes on this schedule.
 
-**Every 6 hours**, Forge pulls your latest workouts from Hevy's API, including every exercise, set, rep, and weight.
+**Apple Health** (via Health Auto Export): set automation frequency to **every 6 hours** to match Forge's sync cycle.
 
 **On demand**, you can upload a MFP CSV export for detailed per-food breakdowns, or hit `/api/sync/all` to force a full refresh.
 
@@ -33,7 +33,7 @@ iPhone
   |       v
   |   Health Auto Export app
   |       |
-  |       | POST /api/webhook/health-auto-export (hourly)
+  |       | POST /api/webhook/health-auto-export (every 6h)
   |       v
   |   +-----------+       +-------------+
   |   |   Forge   | <---> |  MongoDB    |
@@ -94,7 +94,7 @@ iPhone
    - Header: `Authorization: Bearer forge_webhook_2026`
    - Metrics: dietary_energy, dietary_protein, dietary_carbohydrates, dietary_fat_total, dietary_fiber, sleep_analysis, heart_rate_variability, resting_heart_rate, step_count, body_mass, body_fat_percentage
    - Format: JSON
-   - Frequency: Every 1 hour
+   - Frequency: Every 6 hours
    - Batch Requests: ON
 5. Enable and tap Sync Now to test
 
@@ -135,7 +135,7 @@ source .venv/bin/activate
 PREVIEW_MODE=true uvicorn app.main:app --reload --port 8000
 ```
 
-- **Mobile UI preview:** http://localhost:8000/api/preview
+- **Mobile web app:** http://localhost:8000/app (add to home screen on iPhone)
 - **API docs:** http://localhost:8000/docs
 - **Mobile bootstrap:** http://localhost:8000/api/mobile/config
 

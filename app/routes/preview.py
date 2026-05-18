@@ -1,16 +1,30 @@
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pathlib import Path
 from app.services import preview_data, analysis_service
 from app.config import get_settings
 
 router = APIRouter(tags=["preview"])
+_STATIC = Path(__file__).parent.parent / "static"
+
+
+def _preview_html() -> str:
+    return (_STATIC / "preview.html").read_text()
+
+
+@router.get("/app", response_class=HTMLResponse, include_in_schema=False)
+async def mobile_app():
+    return HTMLResponse(_preview_html())
 
 
 @router.get("/preview", response_class=HTMLResponse, include_in_schema=False)
 async def preview_ui():
-    html_path = Path(__file__).parent.parent / "static" / "preview.html"
-    return HTMLResponse(html_path.read_text())
+    return HTMLResponse(_preview_html())
+
+
+@router.get("/preview/manifest.json", include_in_schema=False)
+async def preview_manifest():
+    return FileResponse(_STATIC / "manifest.json", media_type="application/json")
 
 
 @router.get("/preview/dashboard")

@@ -13,6 +13,8 @@ async def mobile_config():
         "api_version": "1.0.0",
         "preview_mode": settings.preview_mode,
         "program_start": settings.program_start,
+        "sync_interval_hours": settings.sync_interval_hours,
+        "web_app_url": "/app",
         "screens": {
             "dashboard": {
                 "path": "/api/analysis/today",

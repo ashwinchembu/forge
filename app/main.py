@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.routes.api import router
 from app.routes.preview import router as preview_router
 from app.routes.mobile import router as mobile_router
 from app.database import setup_indexes
-from app.services.hevy_service import sync_hevy_workouts
-from app.services.oura_service import sync_oura
+from app.services.sync_scheduler import run_scheduled_sync, get_sync_status
 from app.config import get_settings
 
 
@@ -24,14 +24,17 @@ async def lifespan(app: FastAPI):
             print(f"MongoDB unavailable ({e}). Set PREVIEW_MODE=true for local preview.")
     else:
         print("Preview mode — using demo data, MongoDB optional")
-    if settings.hevy_api_key:
-        scheduler.add_job(sync_hevy_workouts, "interval", hours=6, id="hevy_sync")
-        print("Hevy auto-sync scheduled every 6 hours")
-    if settings.oura_access_token:
-        scheduler.add_job(sync_oura, "interval", hours=6, id="oura_sync")
-        print("Oura auto-sync scheduled every 6 hours")
-    if scheduler.get_jobs():
-        scheduler.start()
+
+    interval = settings.sync_interval_hours
+    await run_scheduled_sync()
+    scheduler.add_job(
+        run_scheduled_sync,
+        "interval",
+        hours=interval,
+        id="forge_sync",
+    )
+    scheduler.start()
+    print(f"Data sync scheduled every {interval} hours (Hevy + Oura)")
     yield
     if scheduler.running:
         scheduler.shutdown()
@@ -58,6 +61,11 @@ app.include_router(preview_router, prefix="/api")
 app.include_router(mobile_router, prefix="/api")
 
 
+@app.get("/app", response_class=RedirectResponse, include_in_schema=False)
+async def app_redirect():
+    return RedirectResponse(url="/api/app", status_code=302)
+
+
 @app.get("/")
 async def root():
     settings = get_settings()
@@ -66,6 +74,7 @@ async def root():
         "status": "running",
         "preview_mode": settings.preview_mode,
         "docs": "/docs",
+        "app": "/app",
         "preview": "/api/preview",
         "mobile_config": "/api/mobile/config",
     }
