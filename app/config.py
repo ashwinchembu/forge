@@ -23,9 +23,6 @@ class Settings(BaseSettings):
     # OpenAI (GPT-4o vision for food photos)
     openai_api_key: str = ""
 
-    # Nutritionix (barcode + natural language food lookup)
-    nutritionix_app_id: str = ""
-    nutritionix_api_key: str = ""
 
     class Config:
         env_file = ".env"
