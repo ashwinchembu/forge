@@ -128,9 +128,22 @@ iPhone
 - `GET /api/program/targets/{week}` - exercise targets for a given week
 - `GET /api/program/schedule` - weekly schedule
 
+## Preview (no MongoDB required)
+
+```bash
+source .venv/bin/activate
+PREVIEW_MODE=true uvicorn app.main:app --reload --port 8000
+```
+
+- **Mobile UI preview:** http://localhost:8000/api/preview
+- **API docs:** http://localhost:8000/docs
+- **Mobile bootstrap:** http://localhost:8000/api/mobile/config
+
+See `mobile/README.md` for React Native / Expo setup.
+
 ## Mobile App
 
-This is the API layer for a future React Native or Flutter app. Screen mapping:
+This is the API layer for a future React Native or Flutter app. Starter client in `mobile/`. Screen mapping:
 - Dashboard: `/api/analysis/today`
 - Today's Workout: `/api/program/targets/{week}`
 - History: `/api/workouts`

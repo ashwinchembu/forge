@@ -10,9 +10,18 @@ class Settings(BaseSettings):
     webhook_secret: str = ""
     host: str = "0.0.0.0"
     port: int = 8000
+    preview_mode: bool = False
+    cors_origins: str = "*"  # comma-separated for production, e.g. http://localhost:8081
+    program_start: str = "2026-05-19"  # default for mobile clients
 
     class Config:
         env_file = ".env"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        if self.cors_origins.strip() == "*":
+            return ["*"]
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 @lru_cache()

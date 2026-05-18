@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.routes.api import router
+from app.routes.preview import router as preview_router
+from app.routes.mobile import router as mobile_router
 from app.database import setup_indexes
 from app.services.hevy_service import sync_hevy_workouts
 from app.services.oura_service import sync_oura
@@ -14,8 +16,14 @@ scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await setup_indexes()
     settings = get_settings()
+    if not settings.preview_mode:
+        try:
+            await setup_indexes()
+        except Exception as e:
+            print(f"MongoDB unavailable ({e}). Set PREVIEW_MODE=true for local preview.")
+    else:
+        print("Preview mode — using demo data, MongoDB optional")
     if settings.hevy_api_key:
         scheduler.add_job(sync_hevy_workouts, "interval", hours=6, id="hevy_sync")
         print("Hevy auto-sync scheduled every 6 hours")
@@ -36,20 +44,31 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten this for production
+    allow_origins=_settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(preview_router, prefix="/api")
+app.include_router(mobile_router, prefix="/api")
 
 
 @app.get("/")
 async def root():
-    return {"app": "Forge", "status": "running", "docs": "/docs"}
+    settings = get_settings()
+    return {
+        "app": "Forge",
+        "status": "running",
+        "preview_mode": settings.preview_mode,
+        "docs": "/docs",
+        "preview": "/api/preview",
+        "mobile_config": "/api/mobile/config",
+    }
 
 
 if __name__ == "__main__":

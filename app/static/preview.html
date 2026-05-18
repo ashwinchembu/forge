@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Forge — Mobile Preview</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --card: #14141f;
+      --border: #252535;
+      --text: #f0f0f5;
+      --muted: #8888a0;
+      --accent: #6c5ce7;
+      --green: #00d68f;
+      --yellow: #ffaa00;
+      --red: #ff6b6b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a24;
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+    }
+    h1 { font-size: 1.1rem; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+    .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; text-align: center; }
+    .phone {
+      width: 100%;
+      max-width: 390px;
+      background: var(--bg);
+      border-radius: 36px;
+      border: 3px solid #333;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    }
+    .status-bar {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .screen { padding: 16px; min-height: 520px; }
+    .score-ring {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      border: 6px solid var(--accent);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .score-ring .num { font-size: 2.2rem; font-weight: 700; }
+    .score-ring .lbl { font-size: 0.7rem; color: var(--muted); }
+    .phase-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      margin-bottom: 12px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .card h3 { font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 4px 0; }
+    .status-hit { color: var(--green); }
+    .status-close { color: var(--yellow); }
+    .status-missed { color: var(--red); }
+    .rec { font-size: 0.85rem; color: var(--muted); line-height: 1.4; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .rec:last-child { border: none; }
+    .tabs {
+      display: flex;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+    }
+    .tab {
+      flex: 1;
+      padding: 12px 4px;
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--muted);
+    }
+    .tab.active { color: var(--accent); }
+    .tab span { display: block; font-size: 1.2rem; margin-bottom: 2px; }
+    .hidden { display: none; }
+    .macro-bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+    .macro-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+    .links { margin-top: 20px; text-align: center; font-size: 0.85rem; }
+    .links a { color: var(--accent); margin: 0 8px; }
+  </style>
+</head>
+<body>
+  <h1>Forge</h1>
+  <p class="subtitle">Mobile app preview — same API your React Native / Expo app will use</p>
+
+  <div class="phone">
+    <div class="status-bar">Forge · Week 1 · Cut Phase</div>
+    <div id="screen" class="screen"></div>
+    <nav class="tabs" id="tabs"></nav>
+  </div>
+
+  <div class="links">
+    <a href="/docs" target="_blank">API Docs</a>
+    <a href="/api/mobile/config" target="_blank">Mobile Config</a>
+    <a href="/api/mobile/health" target="_blank">Health</a>
+  </div>
+
+  <script>
+    const TABS = [
+      { id: "dashboard", icon: "📊", label: "Dashboard" },
+      { id: "workout", icon: "🏋️", label: "Workout" },
+      { id: "nutrition", icon: "🍽", label: "Nutrition" },
+      { id: "recovery", icon: "😴", label: "Recovery" },
+      { id: "progress", icon: "📈", label: "Progress" },
+    ];
+
+    let active = "dashboard";
+    let data = {};
+
+    async function load() {
+      const [dash, workouts, nutrition, recovery, body, program] = await Promise.all([
+        fetch("/api/preview/dashboard").then(r => r.json()),
+        fetch("/api/preview/workouts").then(r => r.json()),
+        fetch("/api/preview/nutrition").then(r => r.json()),
+        fetch("/api/preview/recovery").then(r => r.json()),
+        fetch("/api/preview/body-metrics").then(r => r.json()),
+        fetch("/api/preview/program/week/1").then(r => r.json()),
+      ]);
+      data = { dash, workouts, nutrition, recovery, body, program };
+      render();
+    }
+
+    function renderDashboard() {
+      const d = data.dash;
+      const ex = d.workout?.exercises || [];
+      return `
+        <div class="phase-badge">${d.phase.toUpperCase()} · Week ${d.week} · ${d.expected_workout || "Rest"}</div>
+        <div class="score-ring"><div class="num">${d.score}</div><div class="lbl">Daily Score</div></div>
+        <div class="card">
+          <h3>Today's Lifts</h3>
+          ${ex.map(e => `
+            <div class="row">
+              <span>${e.exercise.split("(")[0].trim()}</span>
+              <span class="status-${e.status}">${e.actual_weight || "—"} lbs · ${e.status}</span>
+            </div>
+          `).join("")}
+        </div>
+        <div class="card">
+          <h3>Recommendations</h3>
+          ${(d.recommendations || []).map(r => `<div class="rec">${r}</div>`).join("")}
+        </div>
+      `;
+    }
+
+    function renderWorkout() {
+      const p = data.program.program?.["Upper A"] || {};
+      return `
+        <div class="card"><h3>Upper A — Bench Priority</h3></div>
+        ${Object.entries(p).slice(0, 6).map(([name, t]) => `
+          <div class="card">
+            <div class="row"><strong>${name.split("(")[0].trim()}</strong><span>${t.weight} lbs</span></div>
+            <div class="row"><span style="color:var(--muted)">${t.sets} × ${t.reps}</span><span style="color:var(--muted)">${t.rest_seconds}s rest</span></div>
+          </div>
+        `).join("")}
+      `;
+    }
+
+    function renderNutrition() {
+      const n = data.dash.nutrition;
+      if (!n) return "<p>No data</p>";
+      const pct = Math.min(100, (n.calories / n.target_calories) * 100);
+      const proPct = Math.min(100, (n.protein_g / n.target_protein_g) * 100);
+      return `
+        <div class="card">
+          <h3>Calories</h3>
+          <div class="row"><span>${n.calories}</span><span>${n.target_calories} target</span></div>
+          <div class="macro-bar"><div class="macro-fill" style="width:${pct}%"></div></div>
+        </div>
+        <div class="card">
+          <h3>Protein</h3>
+          <div class="row"><span>${n.protein_g}g</span><span>${n.target_protein_g}g target</span></div>
+          <div class="macro-bar"><div class="macro-fill" style="width:${proPct}%"></div></div>
+        </div>
+        <div class="card">
+          <div class="row"><span>Carbs</span><span>${n.carbs_g}g</span></div>
+          <div class="row"><span>Fat</span><span>${n.fat_g}g</span></div>
+        </div>
+      `;
+    }
+
+    function renderRecovery() {
+      const r = data.dash.recovery;
+      if (!r) return "<p>No data</p>";
+      return `
+        <div class="card"><div class="row"><span>Sleep</span><span>${r.sleep_hours}h</span></div></div>
+        <div class="card"><div class="row"><span>HRV</span><span>${r.hrv_ms} ms</span></div></div>
+        <div class="card"><div class="row"><span>Resting HR</span><span>${r.resting_heart_rate} bpm</span></div></div>
+        <div class="card"><div class="row"><span>Steps</span><span>${r.steps?.toLocaleString()}</span></div></div>
+      `;
+    }
+
+    function renderProgress() {
+      return data.body.map(b => `
+        <div class="card">
+          <div class="row"><span>${b.date.slice(0, 10)}</span><span>${b.weight_lbs} lbs</span></div>
+          <div class="row"><span style="color:var(--muted)">Body fat</span><span>${b.body_fat_pct}%</span></div>
+        </div>
+      `).join("");
+    }
+
+    function render() {
+      const screens = {
+        dashboard: renderDashboard,
+        workout: renderWorkout,
+        nutrition: renderNutrition,
+        recovery: renderRecovery,
+        progress: renderProgress,
+      };
+      document.getElementById("screen").innerHTML = screens[active]();
+      document.querySelectorAll(".tab").forEach(t => {
+        t.classList.toggle("active", t.dataset.id === active);
+      });
+    }
+
+    const tabsEl = document.getElementById("tabs");
+    TABS.forEach(t => {
+      const btn = document.createElement("button");
+      btn.className = "tab";
+      btn.dataset.id = t.id;
+      btn.innerHTML = `<span>${t.icon}</span>${t.label}`;
+      btn.onclick = () => { active = t.id; render(); };
+      tabsEl.appendChild(btn);
+    });
+
+    load();
+  </script>
+</body>
+</html>
