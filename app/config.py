@@ -11,9 +11,11 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     preview_mode: bool = False
-    cors_origins: str = "*"  # comma-separated for production, e.g. http://localhost:8081
-    program_start: str = "2026-05-19"  # default for mobile clients
-    sync_interval_hours: int = 6
+    cors_origins: str = "*"
+    program_start: str = "2026-05-19"
+    sync_interval_minutes: int = 15  # data pulls: as fast as sources allow
+    briefing_hours: str = "7,13,19"  # morning + every 6h: 7am, 1pm, 7pm
+    imessage_recipient: str = ""  # phone number (+1XXXXXXXXXX) or Apple ID email
 
     class Config:
         env_file = ".env"

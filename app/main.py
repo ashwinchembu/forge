@@ -7,7 +7,8 @@ from app.routes.api import router
 from app.routes.preview import router as preview_router
 from app.routes.mobile import router as mobile_router
 from app.database import setup_indexes
-from app.services.sync_scheduler import run_scheduled_sync, get_sync_status
+from app.services.sync_scheduler import run_scheduled_sync
+from app.services.briefing import send_briefing
 from app.config import get_settings
 
 
@@ -25,16 +26,36 @@ async def lifespan(app: FastAPI):
     else:
         print("Preview mode — using demo data, MongoDB optional")
 
-    interval = settings.sync_interval_hours
+    # 1) Data sync: every N minutes (default 15)
+    interval_min = settings.sync_interval_minutes
     await run_scheduled_sync()
     scheduler.add_job(
         run_scheduled_sync,
         "interval",
-        hours=interval,
-        id="forge_sync",
+        minutes=interval_min,
+        id="forge_data_sync",
     )
+    print(f"Data sync: every {interval_min} minutes (Hevy + Oura)")
+
+    # 2) iMessage briefings: at configured hours (default 7am, 1pm, 7pm)
+    briefing_hours = [int(h.strip()) for h in settings.briefing_hours.split(",") if h.strip()]
+    if settings.imessage_recipient and briefing_hours:
+        for hour in briefing_hours:
+            briefing_type = "morning" if hour == briefing_hours[0] else "check_in"
+            scheduler.add_job(
+                send_briefing,
+                "cron",
+                hour=hour,
+                minute=0,
+                args=[briefing_type],
+                id=f"briefing_{hour}",
+            )
+        hours_str = ", ".join(f"{h}:00" for h in briefing_hours)
+        print(f"iMessage briefings: {hours_str} -> {settings.imessage_recipient}")
+    elif not settings.imessage_recipient:
+        print("iMessage: no recipient set (add IMESSAGE_RECIPIENT to .env)")
+
     scheduler.start()
-    print(f"Data sync scheduled every {interval} hours (Hevy + Oura)")
     yield
     if scheduler.running:
         scheduler.shutdown()
@@ -74,7 +95,7 @@ async def root():
         "status": "running",
         "preview_mode": settings.preview_mode,
         "docs": "/docs",
-        "app": "/app",
+        "app_url": "/app",
         "preview": "/api/preview",
         "mobile_config": "/api/mobile/config",
     }

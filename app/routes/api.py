@@ -3,6 +3,7 @@ from datetime import date, datetime
 from app.config import get_settings
 from app.services import hevy_service, hae_service, mfp_service, analysis_service, oura_service
 from app.services.sync_scheduler import run_scheduled_sync, get_sync_status
+from app.services.briefing import send_briefing, get_last_briefing
 from app.database import workouts_col, nutrition_col, recovery_col, body_metrics_col
 
 router = APIRouter()
@@ -11,6 +12,19 @@ router = APIRouter()
 @router.get("/sync/status")
 async def sync_status():
     return get_sync_status()
+
+
+@router.post("/briefing/send")
+async def trigger_briefing(briefing_type: str = "check_in"):
+    """Send an iMessage briefing right now."""
+    result = await send_briefing(briefing_type)
+    return result
+
+
+@router.get("/briefing/last")
+async def last_briefing():
+    """Last briefing sent."""
+    return get_last_briefing() or {"message": "No briefing sent yet"}
 
 
 # ---- Health Auto Export Webhook ----

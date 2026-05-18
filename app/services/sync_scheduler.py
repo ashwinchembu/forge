@@ -1,4 +1,10 @@
-from datetime import datetime, timezone
+"""
+Two schedules:
+  1. Data sync  — every 15 min (Hevy + Oura + webhook passthrough)
+  2. Briefing   — morning + every 6h via iMessage (configurable hours)
+"""
+
+from datetime import datetime, timezone, timedelta
 from app.config import get_settings
 
 _last_sync: dict | None = None
@@ -12,22 +18,26 @@ def get_sync_status() -> dict:
     seconds_until = None
     if next_at:
         seconds_until = max(0, int((next_at - now).total_seconds()))
+
+    briefing_hours = [int(h) for h in settings.briefing_hours.split(",") if h.strip()]
+
     return {
-        "interval_hours": settings.sync_interval_hours,
+        "sync_interval_minutes": settings.sync_interval_minutes,
+        "briefing_hours": briefing_hours,
+        "imessage_recipient": settings.imessage_recipient[:3] + "****" if settings.imessage_recipient else None,
         "last_sync": _last_sync,
         "next_sync_at": next_at.isoformat() if next_at else None,
         "seconds_until_next": seconds_until,
     }
 
 
-def _set_next_run(interval_hours: int):
+def _set_next_run(interval_minutes: int):
     global _next_sync_at
-    from datetime import timedelta
-    _next_sync_at = datetime.now(timezone.utc) + timedelta(hours=interval_hours)
+    _next_sync_at = datetime.now(timezone.utc) + timedelta(minutes=interval_minutes)
 
 
 async def run_scheduled_sync() -> dict:
-    """Pull Hevy + Oura on the configured interval."""
+    """Pull Hevy + Oura as frequently as possible."""
     global _last_sync
     settings = get_settings()
     results = {"at": datetime.now(timezone.utc).isoformat(), "hevy": None, "oura": None}
@@ -51,5 +61,5 @@ async def run_scheduled_sync() -> dict:
         results["oura"] = {"skipped": "preview_mode"}
 
     _last_sync = results
-    _set_next_run(settings.sync_interval_hours)
+    _set_next_run(settings.sync_interval_minutes)
     return results
